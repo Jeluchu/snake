@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Juego</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+    <link rel="stylesheet" href="assets/css/main.css"/>
+    <!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+    <!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+
+    <script>
+
+      //DECLARACIÓN DE LAS VARIABLES
+
+      var IZQUIERDA = 37, ARRIBA = 38, DERECHA = 39, ABAJO = 40;
+      var _canvas;
+      var _context;
+      var _colorFondo = "#062a37"; //COLOR DEL FONDO
+      var _comidaX;
+      var _comidaY;
+      var _inclinacion = 100;  //INCLINACIÓN DEL DIBUJO [COMIFA]
+
+      //VARIABLES DE LOS PARÁMETROS DEL JUGADOR
+      var _tamanoCuadrado = 20;
+      var _x;
+      var _y;
+      var _ultimaTecla = DERECHA;
+      var _serpiente = new Object();
+      var _longitudSerpiente = 2;
+      var _colorJugador = "#2EFE64";
+      var _timeout = 100;
+
+      window.onload = function()
+      {
+        onresize();
+        CargarCanvas();
+      }
+
+      window.onresize = function()
+      {
+        document.getElementById("canvas").width = window.innerWidth * 0.99 //TAMAÑO ANCHURA
+        document.getElementById("canvas").height = window.innerHeight * 0.30 //TAMAÑO ALTURA
+      }
+
+      ///Cargamos las variables relacionadas con el canvas al cargar
+      function CargarCanvas()
+      {
+        _canvas = document.getElementById("canvas");
+        _context = _canvas.getContext("2d");
+        _x = canvas.width/2 - _tamanoCuadrado/2;
+        _y = canvas.height/2 - _tamanoCuadrado/2;
+        Pintar();
+        PintarFondo();
+        CrearComida();
+      }
+
+      ///Cambia la posición de la comida (únicamente en la parte izquierda de la pantalla)
+      function CrearComida()
+      {
+        _comidaX = Math.round(Math.random()*_canvas.width/2 - 20) + 20;
+        _comidaY = Math.round(Math.random()*_canvas.height - 20) + 20;
+      }
+
+      ///Cambia la posición de la comida
+      function MoverComida()
+      {
+        _comidaX = Math.round(Math.random()*_canvas.width - 20) + 20;
+        _comidaY = Math.round(Math.random()*_canvas.height - 20) + 20;
+      }
+
+
+      ///LOOP
+      function Pintar()
+      {
+        PintarFondo();
+        MoverCuadrado();
+        ComprobarSalidaJugador();
+        PintarJugador();
+        PintarComida();
+
+        setTimeout(function(){
+          Pintar();
+        }, _timeout);
+      }
+
+      //Pintamos el fondo del canvas
+      function PintarFondo()
+      {
+        _context.fillStyle = _colorFondo;
+        _context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      ///PINTAMOS EL ARRAY SERPIENTE CORRESPONDIENTE AL JUGADOR
+      function PintarJugador()
+      {
+        _context.fillStyle = _colorJugador;
+        //Recolocamos el array una posición atrás y pisamos el 0 (más antiguo)
+        if(Object.keys(_serpiente).length >= _longitudSerpiente)
+        {
+          var _serpienteBuffer = new Object();
+          for(var i = 0; i < _longitudSerpiente-1; i ++)
+          {
+            _serpienteBuffer[i] = _serpiente[i+1];
+          }
+          _serpiente = _serpienteBuffer;
+        }
+        _serpiente[Object.keys(_serpiente).length] = {x: _x, y: _y};
+        for(var i = 0; i < Object.keys(_serpiente).length; i ++)
+        {
+          _context.fillRect(_serpiente[i].x, _serpiente[i].y, _tamanoCuadrado, _tamanoCuadrado);
+        }
+        ComprobarObtencionComida();
+      }
+
+      ///Comprobamos si la nueva cabeza de la serpiente colisiona con la comida
+      function ComprobarObtencionComida()
+      {
+        var diferencia = 6;
+        /*if(_x - _tamanoCuadrado/2 - diferencia < _comidaX && _x + _tamanoCuadrado/2 + diferencia > _comidaX &&
+           _y - _tamanoCuadrado/2 - diferencia < _comidaY && _y + _tamanoCuadrado/2 + diferencia > _comidaY)*/
+        if(_x - diferencia < _comidaX && _x + _tamanoCuadrado + diferencia > _comidaX &&
+           _y - diferencia < _comidaY && _y + _tamanoCuadrado + diferencia > _comidaY)
+        {
+          MoverComida();
+          _longitudSerpiente ++;
+        }
+      }
+
+      ///Pintamos un cuadrado del color del jugador en un lugar aleatorio diferente al array _serpiente
+      function PintarComida()
+      {
+        if(_inclinacion <= 150)
+        {
+          _inclinacion += 5;
+        }
+        else
+        {
+          _inclinacion = 40;
+        }
+        for(i = 2; i <= 3; i ++)
+        {
+          _context.beginPath();
+          _context.strokeStyle  = _colorJugador;
+          _context.ellipse(_comidaX, _comidaY, 10, i, _inclinacion * Math.PI/180, 1, 4 * Math.PI);
+          _context.lineWidth = 2;
+          _context.stroke();
+
+          _context.beginPath();
+          _context.strokeStyle  = _colorJugador;
+          _context.ellipse(_comidaX, _comidaY, 10, i, _inclinacion * (-1) * Math.PI/180, 1, 4 * Math.PI);
+          _context.lineWidth = 2;
+          _context.stroke();
+        }
+
+      }
+
+      ///Comprobamos si el jugador sale por alguna de las paredes del canvas
+      function ComprobarSalidaJugador()
+      {
+        var diferencia = 5;
+
+        //Sale por arriba
+        if(_y + _tamanoCuadrado + diferencia < 0)
+        {
+          SacarPorParedNoContraria(ObtenerParedDistintaDe(ABAJO));
+        }
+        //Sale por abajo
+        else if(_y - diferencia > canvas.height)
+        {
+          SacarPorParedNoContraria(ObtenerParedDistintaDe(ARRIBA));
+        }
+        //Sale por la izquierda
+        else if(_x + _tamanoCuadrado + diferencia < 0)
+        {
+          SacarPorParedNoContraria(ObtenerParedDistintaDe(DERECHA));
+        }
+        //Sale por derecha
+        else if(_x - _tamanoCuadrado - diferencia > canvas.width)
+        {
+          SacarPorParedNoContraria(ObtenerParedDistintaDe(IZQUIERDA));
+        }
+
+      }
+
+      ///Devuelve la pared por la que va a salir el jugador
+      function ObtenerParedDistintaDe(excepcion)
+      {
+        var paredes = new Array();
+        var contador = 0;
+        if(excepcion != ARRIBA)
+        {
+          paredes[contador] = ARRIBA;
+          contador ++;
+        }
+        if(excepcion != ABAJO)
+        {
+          paredes[contador] = ABAJO;
+          contador ++;
+        }
+        if(excepcion != IZQUIERDA)
+        {
+          paredes[contador] = IZQUIERDA;
+          contador ++;
+        }
+        if(excepcion != DERECHA)
+        {
+          paredes[contador] = DERECHA;
+          contador ++;
+        }
+        return paredes[Math.round((Math.random()*10)%(paredes.length-1))];
+      }
+
+      function SacarPorParedNoContraria(pared)
+      {
+        var puntoDeSalida = 0;
+        if(pared == ARRIBA || pared == ABAJO)
+        {
+          puntoDeSalida = Math.round(Math.random()*canvas.width - 20) + 20;
+          if(pared == ARRIBA)
+          {
+            _ultimaTecla = ABAJO;
+            _y = 0;
+            _x = puntoDeSalida;
+          }
+          else
+          {
+            _ultimaTecla = ARRIBA;
+            _y = canvas.height;
+            _x = puntoDeSalida;
+          }
+        }
+        else
+        {
+          puntoDeSalida = Math.round(Math.random()*canvas.height - 20) + 20;
+          if(pared == IZQUIERDA)
+          {
+            _ultimaTecla = DERECHA;
+            _x = 0;
+            _y = puntoDeSalida;
+          }
+          else
+          {
+            _ultimaTecla = IZQUIERDA;
+            _x = canvas.width;
+            _y = puntoDeSalida;
+          }
+        }
+      }
+
+      function MoverCuadrado()
+      {
+        var movimiento = _tamanoCuadrado;
+
+        if(_ultimaTecla == ARRIBA)
+        {
+          _y -= movimiento;
+        }
+        else if(_ultimaTecla == ABAJO)
+        {
+          _y += movimiento;
+        }
+        else if(_ultimaTecla == IZQUIERDA)
+        {
+          _x -= movimiento;
+        }
+        else if(_ultimaTecla == DERECHA)
+        {
+          _x += movimiento;
+        }
+      }
+
+      document.addEventListener('keydown', function (evento)
+      {
+        if(evento.keyCode == ARRIBA || evento.keyCode == ABAJO || evento.keyCode == IZQUIERDA || evento.keyCode == DERECHA)
+        {
+          if(_ultimaTecla == ARRIBA && evento.keyCode != ABAJO)
+          {
+            _ultimaTecla = evento.keyCode;
+          }
+          else if(_ultimaTecla == ABAJO && evento.keyCode != ARRIBA)
+          {
+            _ultimaTecla = evento.keyCode;
+          }
+          else if(_ultimaTecla == DERECHA && evento.keyCode != IZQUIERDA)
+          {
+            _ultimaTecla = evento.keyCode;
+          }
+          else if(_ultimaTecla == IZQUIERDA && evento.keyCode != DERECHA)
+          {
+            _ultimaTecla = evento.keyCode;
+          }
+
+        }
+
+        //MoverCuadrado(evento.keyCode);
+      }, false);
+
+      function OnClickSlow()
+      {
+        if(_timeout < 140)
+        {
+          _timeout += 20;
+        }
+      }
+
+      function OnClickFast()
+      {
+        if(_timeout > 40)
+        {
+          _timeout -= 20;
+        }
+      }
+    </script>
+
+  </head>
+  <body>
+
+    <div id="page-wrapper">
+
+        <header id="header">
+          <h1><a href="index.html">Snaker's</a></h1>
+          <nav id="nav">
+            <ul id=”button”>
+              <li class="special">
+                <div>
+                   <li><a href="index.html">Inicio</a></li>
+                   <li><a href="game.html">Juego</a></li>
+                </div>
+              </li>
+            </ul>
+          </nav>
+        </header>
+
+        <section id="one" class="wrapper style1 special" style="background-color: #128ebc;">
+          <h2>Cambia la velocidad</h2>
+            <ul class="icons major">
+              <li><input type="button" value="MÁS LENTO" style="background-color: #ffac33;" class="button special" onclick="OnClickSlow()"></li>
+              <li><input type="button" value="MÁS VELOZ" style="background-color: #ffac33;" class="button special" onclick="OnClickFast()"></li>
+            </ul>
+        </section>
+
+    <section>
+    			<canvas id="canvas" width="500" height="150">
+    				Tú navegador no soporta "Canvas"
+    			</canvas>
+    </section>
+
+    <!-- Footer -->
+      <footer id="footer">
+        <ul class="copyright">
+          <li>SNAKER'S &copy; 2018</li><li>Diseñado: <a href="http://jeluchu.github.io/">Jéluchu</a></li>
+        </ul>
+      </footer>
+
+    </div>
+
+        <!-- Scripts -->
+    			<script src="assets/js/jquery.min.js"></script>
+    		  <script src="assets/js/jquery.scrollex.min.js"></script>
+    			<script src="assets/js/jquery.scrolly.min.js"></script>
+    			<script src="assets/js/skel.min.js"></script>
+    			<script src="assets/js/util.js"></script>
+    			<!--[if lte IE 8]><script src="assets/js/ie/respond.min.js"></script><![endif]-->
+    			<script src="assets/js/main.js"></script>
+
+  </body>
+</html>
